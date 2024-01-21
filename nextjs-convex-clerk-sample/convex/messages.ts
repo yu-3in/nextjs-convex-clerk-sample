@@ -2,25 +2,20 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 export const getAll = query({
-  args: { messageId: v.id("messages") },
-  handler: async (ctx, args) => {
+  handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       throw new Error("UnAuthorized");
     }
     const userId = identity.subject;
 
-    const message = await ctx.db.get(args.messageId);
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .order("desc")
+      .collect();
 
-    if (!message) {
-      throw new Error("Not found");
-    }
-
-    if (message?.userId !== userId) {
-      throw new Error("Not authorized");
-    }
-
-    return message;
+    return messages;
   },
 });
 
